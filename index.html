@@ -532,7 +532,8 @@ function buildCustomerPin(color) {
 // ================================================================
 function calcFee(miles) {
   const extra = Math.max(0, miles - CONFIG.freeRadiusMiles);
-  return CONFIG.baseFee + extra * CONFIG.perMileRate;
+  const raw = CONFIG.baseFee + extra * CONFIG.perMileRate;
+  return Math.ceil(raw / 5) * 5;
 }
 
 // ================================================================
@@ -618,21 +619,26 @@ async function checkAddress() {
       icon.textContent = '✓';
       title.textContent = `You're in the ${zoneLabel} delivery zone!`;
 
+      const rawFee = CONFIG.baseFee + extraMiles * CONFIG.perMileRate;
       let breakdownText = `Base fee: $${CONFIG.baseFee.toFixed(2)}`;
       if (extraMiles > 0) {
-        breakdownText += ` + ${extraMiles} additional mi × $${CONFIG.perMileRate.toFixed(2)} = $${(extraMiles * CONFIG.perMileRate).toFixed(2)}`;
+        breakdownText += ` + ${extraMiles} additional mi × $${CONFIG.perMileRate.toFixed(2)} = $${rawFee.toFixed(2)}, rounded up to nearest $5`;
       } else {
         breakdownText += ` (within ${CONFIG.freeRadiusMiles}-mile included radius)`;
       }
 
       body.innerHTML = `
         <div class="quote-grid">
-          <div class="quote-item"><div class="q-value price">$${fee.toFixed(2)}</div><div class="q-label">Delivery fee</div></div>
+          <div class="quote-item"><div class="q-value price">$${fee}</div><div class="q-label">Delivery fee</div></div>
           <div class="quote-item"><div class="q-value">${driveMin} min</div><div class="q-label">Drive time</div></div>
           <div class="quote-item"><div class="q-value">${roundMiles} mi</div><div class="q-label">Distance</div></div>
           <div class="quote-item"><div class="q-value">${zoneLabel}</div><div class="q-label">Zone (${north ? 'N of' : 'S of'} Hwy 39)</div></div>
         </div>
         <div class="quote-breakdown">${breakdownText}</div>
+        <div class="quote-breakdown" style="font-style:italic;margin-top:-4px;">
+          Delivery fee is an estimate based on calculated drive distance and may not reflect final charges.
+          If there is a discrepancy upon scheduling, we will reach out before confirming your delivery.
+        </div>
         <div class="result-note">
           ${CONFIG.scheduling.enabled ? `<strong>Delivery days:</strong> We deliver to your area on <strong>${CONFIG.scheduling.zones[north ? 'north' : 'south'].days}</strong>, ${CONFIG.scheduling.zones[north ? 'north' : 'south'].window}.<br><br>` : ''}
           <strong>Next steps:</strong> Place your order through our store, then we'll contact you to arrange a delivery date and provide an estimated delivery window.
