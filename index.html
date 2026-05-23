@@ -449,15 +449,6 @@ async function computeIsochrone(onProgress) {
 function drawZones() {
   if (!isoReady) return;
 
-  // Draw largest ring first so smaller ones render on top.
-  // Colors go dark (far/expensive) → light (close/cheap).
-  const rings = [
-    { minutes: 60, color: '#1A3F6F', fillOpacity: 0.60, strokeOpacity: 0.70 },
-    { minutes: 45, color: '#2471A3', fillOpacity: 0.60, strokeOpacity: 0.70 },
-    { minutes: 30, color: '#7FB3D3', fillOpacity: 0.60, strokeOpacity: 0.70 },
-    { minutes: 15, color: '#D6EAF8', fillOpacity: 0.60, strokeOpacity: 0.70 },
-  ];
-
   function sortByAngle(pts) {
     return [...pts].sort((a, b) => {
       const aa = Math.atan2(a.lng - CONFIG.store.lng, a.lat - CONFIG.store.lat);
@@ -466,13 +457,30 @@ function drawZones() {
     });
   }
 
-  rings.forEach(ring => {
-    const pts = isochronePoints[ring.minutes];
-    if (!pts || pts.length < 3) return;
+  const sorted = {
+    15: sortByAngle(isochronePoints[15] || []),
+    30: sortByAngle(isochronePoints[30] || []),
+    45: sortByAngle(isochronePoints[45] || []),
+    60: sortByAngle(isochronePoints[60] || []),
+  };
+
+  // Each band is a donut: outer boundary + reversed inner boundary as a hole.
+  // This prevents fill stacking so every band renders at the same true opacity.
+  const bands = [
+    { outer: sorted[15], inner: null,       color: '#D6EAF8' },
+    { outer: sorted[30], inner: sorted[15], color: '#7FB3D3' },
+    { outer: sorted[45], inner: sorted[30], color: '#2471A3' },
+    { outer: sorted[60], inner: sorted[45], color: '#1A3F6F' },
+  ];
+
+  bands.forEach(band => {
+    if (!band.outer || band.outer.length < 3) return;
+    const paths = [band.outer];
+    if (band.inner && band.inner.length >= 3) paths.push([...band.inner].reverse());
     new google.maps.Polygon({
-      paths: sortByAngle(pts),
-      strokeColor: ring.color, strokeWeight: 1.5, strokeOpacity: ring.strokeOpacity,
-      fillColor: ring.color, fillOpacity: ring.fillOpacity,
+      paths,
+      strokeColor: band.color, strokeWeight: 1.5, strokeOpacity: 0.70,
+      fillColor: band.color, fillOpacity: 0.60,
       map: gmap
     });
   });
