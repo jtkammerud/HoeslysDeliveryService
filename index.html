@@ -147,10 +147,10 @@
     <div class="map-title-bar">
       <h2>Our delivery area</h2>
       <div class="map-legend">
-        <span><span class="dot" style="background:#C8E6D4;border:1px solid #78BEA2"></span> 0–15 min</span>
-        <span><span class="dot" style="background:#78BEA2"></span> 15–30 min</span>
-        <span><span class="dot" style="background:#3D8B6F"></span> 30–45 min</span>
-        <span><span class="dot" style="background:#1B5E44"></span> 45–60 min</span>
+        <span><span class="dot" style="background:#D6EAF8;border:1px solid #7FB3D3"></span> 0–15 min</span>
+        <span><span class="dot" style="background:#7FB3D3"></span> 15–30 min</span>
+        <span><span class="dot" style="background:#2471A3"></span> 30–45 min</span>
+        <span><span class="dot" style="background:#1A3F6F"></span> 45–60 min</span>
         <span><span class="dot" style="background:var(--brand-dark)"></span> Store</span>
       </div>
     </div>
@@ -452,10 +452,10 @@ function drawZones() {
   // Draw largest ring first so smaller ones render on top.
   // Colors go dark (far/expensive) → light (close/cheap).
   const rings = [
-    { minutes: 60, color: '#1B5E44', fillOpacity: 0.50, strokeOpacity: 0.6 },
-    { minutes: 45, color: '#3D8B6F', fillOpacity: 0.55, strokeOpacity: 0.6 },
-    { minutes: 30, color: '#78BEA2', fillOpacity: 0.60, strokeOpacity: 0.7 },
-    { minutes: 15, color: '#C8E6D4', fillOpacity: 0.65, strokeOpacity: 0.7 },
+    { minutes: 60, color: '#1A3F6F', fillOpacity: 0.50, strokeOpacity: 0.6 },
+    { minutes: 45, color: '#2471A3', fillOpacity: 0.55, strokeOpacity: 0.6 },
+    { minutes: 30, color: '#7FB3D3', fillOpacity: 0.60, strokeOpacity: 0.7 },
+    { minutes: 15, color: '#D6EAF8', fillOpacity: 0.65, strokeOpacity: 0.7 },
   ];
 
   function sortByAngle(pts) {
