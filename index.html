@@ -227,8 +227,8 @@ const CONFIG = {
   freeRadiusMiles: 10,
 
   // ISOCHRONE — how accurately to map the delivery boundary
-  numAngles: 28,
-  ringsMiles: [8, 16, 24, 32, 42, 55],
+  numAngles: 48,
+  ringsMiles: [6, 12, 18, 24, 30, 38, 46, 55],
 
   // CACHE — how long to remember computed zones (milliseconds)
   cacheDurationMs: 30 * 24 * 60 * 60 * 1000, // 30 days
@@ -335,19 +335,20 @@ function isNorthOfHwy39(lat, lng) {
 // ================================================================
 function getCachedIsochrone() {
   try {
-    const raw = localStorage.getItem('hoeslys_isochrone');
+    const raw = localStorage.getItem('hoeslys_iso_v2');
     if (!raw) return null;
     const cached = JSON.parse(raw);
     if (Date.now() - cached.timestamp > CONFIG.cacheDurationMs) return null;
     if (cached.maxMin !== CONFIG.maxDriveMin) return null;
+    if (cached.numAngles !== CONFIG.numAngles) return null;
     return cached.points;
   } catch { return null; }
 }
 
 function setCachedIsochrone(points) {
   try {
-    localStorage.setItem('hoeslys_isochrone', JSON.stringify({
-      points, timestamp: Date.now(), maxMin: CONFIG.maxDriveMin
+    localStorage.setItem('hoeslys_iso_v2', JSON.stringify({
+      points, timestamp: Date.now(), maxMin: CONFIG.maxDriveMin, numAngles: CONFIG.numAngles
     }));
   } catch {}
 }
@@ -445,47 +446,42 @@ async function computeIsochrone(onProgress) {
 function drawZones() {
   if (!isoReady) return;
 
-  // Split isochrone into north/south based on Hwy 39
-  const northPts = [], southPts = [];
-  isochronePoints.forEach(pt => {
-    if (isNorthOfHwy39(pt.lat, pt.lng)) northPts.push(pt);
-    else southPts.push(pt);
+  // Sort all boundary points by angle from the store center first
+  const sortedIso = [...isochronePoints].sort((a, b) => {
+    const aa = Math.atan2(a.lng - CONFIG.store.lng, a.lat - CONFIG.store.lat);
+    const ab = Math.atan2(b.lng - CONFIG.store.lng, b.lat - CONFIG.store.lat);
+    return aa - ab;
   });
 
-  // Add Hwy 39 edge points to both polygons for clean closure
+  // Split into north/south preserving the sorted angular order
+  const northBoundary = sortedIso.filter(pt => isNorthOfHwy39(pt.lat, pt.lng));
+  const southBoundary = sortedIso.filter(pt => !isNorthOfHwy39(pt.lat, pt.lng));
+
+  // Build a Hwy 39 closure segment sorted west→east within the isochrone extent
+  let hwyPts = [];
   if (hwyReady) {
-    const lngs = isochronePoints.map(p => p.lng);
-    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-    const hwyInRange = hwy39Path.filter(p => p.lng >= minLng - 0.02 && p.lng <= maxLng + 0.02);
-    const step = Math.max(1, Math.floor(hwyInRange.length / 24));
-    for (let i = 0; i < hwyInRange.length; i += step) {
-      northPts.push(hwyInRange[i]);
-      southPts.push(hwyInRange[i]);
-    }
+    const lngs = sortedIso.map(p => p.lng);
+    const minLng = Math.min(...lngs) - 0.02, maxLng = Math.max(...lngs) + 0.02;
+    const hwyInRange = hwy39Path.filter(p => p.lng >= minLng && p.lng <= maxLng);
+    const step = Math.max(1, Math.floor(hwyInRange.length / 30));
+    for (let i = 0; i < hwyInRange.length; i += step) hwyPts.push(hwyInRange[i]);
+    hwyPts.sort((a, b) => a.lng - b.lng);
   }
 
-  function sortByAngle(pts) {
-    return pts.sort((a, b) => {
-      const aa = Math.atan2(a.lng - CONFIG.store.lng, a.lat - CONFIG.store.lat);
-      const ab = Math.atan2(b.lng - CONFIG.store.lng, b.lat - CONFIG.store.lat);
-      return aa - ab;
-    });
-  }
-
-  // North zone polygon
-  if (northPts.length >= 3) {
+  // North polygon: boundary arc + hwy39 east→west closes the bottom edge
+  if (northBoundary.length >= 3) {
     new google.maps.Polygon({
-      paths: sortByAngle(northPts),
+      paths: [...northBoundary, ...[...hwyPts].reverse()],
       strokeColor: '#2B6590', strokeWeight: 2, strokeOpacity: 0.7,
       fillColor: '#2B6590', fillOpacity: 0.10,
       map: gmap
     });
   }
 
-  // South zone polygon
-  if (southPts.length >= 3) {
+  // South polygon: boundary arc + hwy39 west→east closes the top edge
+  if (southBoundary.length >= 3) {
     new google.maps.Polygon({
-      paths: sortByAngle(southPts),
+      paths: [...southBoundary, ...hwyPts],
       strokeColor: '#1E7A56', strokeWeight: 2, strokeOpacity: 0.7,
       fillColor: '#1E7A56', fillOpacity: 0.10,
       map: gmap
