@@ -233,6 +233,15 @@ const CONFIG = {
   // CACHE — how long to remember computed zones (milliseconds)
   cacheDurationMs: 30 * 24 * 60 * 60 * 1000, // 30 days
 
+  // SCHEDULING — set enabled: true and update days/windows when ready to advertise delivery days
+  scheduling: {
+    enabled: false,
+    zones: {
+      north: { days: 'Tuesdays & Thursdays', window: '10 AM – 4 PM' },
+      south: { days: 'Wednesdays & Fridays', window: '10 AM – 4 PM' },
+    }
+  },
+
   // HIGHWAY 39 WAYPOINTS (lat, lng) west to east
   hwy39: [
     { lat: 42.970, lng: -90.300 },
@@ -627,6 +636,7 @@ async function checkAddress() {
         </div>
         <div class="quote-breakdown">${breakdownText}</div>
         <div class="result-note">
+          ${CONFIG.scheduling.enabled ? `<strong>Delivery days:</strong> We deliver to your area on <strong>${CONFIG.scheduling.zones[north ? 'north' : 'south'].days}</strong>, ${CONFIG.scheduling.zones[north ? 'north' : 'south'].window}.<br><br>` : ''}
           <strong>Next steps:</strong> Place your order through our store, then we'll contact you to arrange a delivery date and provide an estimated delivery window.
           <strong>Someone must be home</strong> to receive the delivery — we cannot leave perishable products unattended.
         </div>`;
