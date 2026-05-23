@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoesly's Meats - Delivery Quote</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        input[type="text"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #b71c1c; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; display: none; }
+        .success { background-color: #e8f5e9; border: 1px solid #c8e6c9; color: #2e7d32; }
+        .error { background-color: #ffebee; border: 1px solid #ffcdd2; color: #c62828; }
+        .scheduler-btn { display: inline-block; margin-top: 15px; padding: 10px 15px; background-color: #1976d2; color: white; text-decoration: none; border-radius: 4px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Delivery Quote & Scheduling</h2>
+    <p>Enter your address to check delivery availability from Hoesly's Meats.</p>
+    
+    <input type="text" id="customerAddress" placeholder="e.g., 123 Main St, Madison, WI">
+    <button onclick="checkDelivery()">Check Delivery</button>
+
+    <div id="outputMessage" class="result"></div>
+</div>
+
+<script>
+    // The exact latitude of Highway 39 as it passes the store
+    const HIGHWAY_39_LATITUDE = 42.8126; 
+    const STORE_ADDRESS = "219 Industrial Dr, New Glarus, WI";
+    const BASE_FEE = 10; // $10 base fee
+    const PER_MINUTE_FEE = 0.50; // $0.50 per minute over 20 mins
+
+    function checkDelivery() {
+        const address = document.getElementById('customerAddress').value;
+        if (!address) {
+            alert("Please enter an address.");
+            return;
+        }
+
+        const geocoder = new google.maps.Geocoder();
+        const distanceMatrix = new google.maps.DistanceMatrixService();
+
+        // Step 1: Geocode the address to find out if it's North or South of Highway 39
+        geocoder.geocode({ 'address': address }, function(results, status) {
+            if (status === 'OK') {
+                const customerLat = results[0].geometry.location.lat();
+                const routeZone = (customerLat >= HIGHWAY_39_LATITUDE) ? "North" : "South";
+                
+                // Step 2: Check the exact drive time from the store
+                distanceMatrix.getDistanceMatrix({
+                    origins: [STORE_ADDRESS],
+                    destinations: [address],
+                    travelMode: 'DRIVING',
+                    unitSystem: google.maps.UnitSystem.IMPERIAL,
+                }, function(response, status) {
+                    if (status === 'OK') {
+                        const element = response.rows[0].elements[0];
+                        if (element.status === 'OK') {
+                            const driveTimeMinutes = Math.ceil(element.duration.value / 60);
+                            processQuote(driveTimeMinutes, routeZone);
+                        } else {
+                            displayError("Sorry, we couldn't calculate a route to that address.");
+                        }
+                    } else {
+                        displayError("Error connecting to routing service.");
+                    }
+                });
+            } else {
+                displayError("Address not found. Please try adding the city and state.");
+            }
+        });
+    }
+
+    function processQuote(minutes, zone) {
+        const output = document.getElementById('outputMessage');
+        output.style.display = "block";
+
+        if (minutes > 60) {
+            // Out of bounds
+            output.className = "result error";
+            output.innerHTML = `<strong>Out of Delivery Area</strong><br>Your location is a ${minutes}-minute drive. We only deliver within a 60-minute radius to ensure product quality. Please select In-Store Pickup.`;
+        } else {
+            // Inside boundary - Calculate Fee
+            let deliveryFee = BASE_FEE;
+            if (minutes > 20) {
+                deliveryFee += (minutes - 20) * PER_MINUTE_FEE;
+            }
+
+            // Assign Scheduling Days based on Zone
+            let scheduleDays = (zone === "North") ? "Tuesdays & Thursdays" : "Wednesdays & Fridays";
+            
+            output.className = "result success";
+            output.innerHTML = `
+                <strong>Delivery Available! (${zone} Route)</strong><br>
+                Estimated Drive Time: ${minutes} minutes<br>
+                <strong>Delivery Fee: $${deliveryFee.toFixed(2)}</strong><br><br>
+                We deliver to your area on <strong>${scheduleDays}</strong>. Because our products are perishable, you must be home to receive them.
+                <br>
+                <a href="#" class="scheduler-btn">Select a 2-Hour Delivery Window</a>
+            `;
+        }
+    }
+
+    function displayError(msg) {
+        const output = document.getElementById('outputMessage');
+        output.style.display = "block";
+        output.className = "result error";
+        output.innerHTML = msg;
+    }
+</script>
+
+<!-- Replace YOUR_GOOGLE_MAPS_API_KEY_HERE with the actual key -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY_HERE"></script>
+
+</body>
+</html>
