@@ -457,11 +457,27 @@ function drawZones() {
     });
   }
 
+  // Chaikin smoothing: each pass cuts corners to produce a rounder curve.
+  // Runs client-side at draw time — no API cost.
+  function chaikin(pts, passes) {
+    let r = pts;
+    for (let p = 0; p < passes; p++) {
+      const s = [];
+      for (let i = 0; i < r.length; i++) {
+        const a = r[i], b = r[(i + 1) % r.length];
+        s.push({ lat: 0.75*a.lat + 0.25*b.lat, lng: 0.75*a.lng + 0.25*b.lng });
+        s.push({ lat: 0.25*a.lat + 0.75*b.lat, lng: 0.25*a.lng + 0.75*b.lng });
+      }
+      r = s;
+    }
+    return r;
+  }
+
   const sorted = {
-    15: sortByAngle(isochronePoints[15] || []),
-    30: sortByAngle(isochronePoints[30] || []),
-    45: sortByAngle(isochronePoints[45] || []),
-    60: sortByAngle(isochronePoints[60] || []),
+    15: chaikin(sortByAngle(isochronePoints[15] || []), 4),
+    30: chaikin(sortByAngle(isochronePoints[30] || []), 3),
+    45: chaikin(sortByAngle(isochronePoints[45] || []), 2),
+    60: chaikin(sortByAngle(isochronePoints[60] || []), 2),
   };
 
   // Each band is a donut: outer boundary + reversed inner boundary as a hole.
