@@ -147,7 +147,10 @@
     <div class="map-title-bar">
       <h2>Our delivery area</h2>
       <div class="map-legend">
-        <span><span class="dot" style="background:var(--brand)"></span> Delivery area</span>
+        <span><span class="dot" style="background:#7B2D1E"></span> 0–15 min</span>
+        <span><span class="dot" style="background:#B44B3A"></span> 15–30 min</span>
+        <span><span class="dot" style="background:#C97B5E"></span> 30–45 min</span>
+        <span><span class="dot" style="background:#D4A898"></span> 45–60 min</span>
         <span><span class="dot" style="background:var(--brand-dark)"></span> Store</span>
       </div>
     </div>
@@ -334,20 +337,20 @@ function isNorthOfHwy39(lat, lng) {
 // ================================================================
 function getCachedIsochrone() {
   try {
-    const raw = localStorage.getItem('hoeslys_iso_v2');
+    const raw = localStorage.getItem('hoeslys_iso_v3');
     if (!raw) return null;
     const cached = JSON.parse(raw);
     if (Date.now() - cached.timestamp > CONFIG.cacheDurationMs) return null;
     if (cached.maxMin !== CONFIG.maxDriveMin) return null;
     if (cached.numAngles !== CONFIG.numAngles) return null;
-    return cached.points;
+    return cached.boundaries;
   } catch { return null; }
 }
 
-function setCachedIsochrone(points) {
+function setCachedIsochrone(boundaries) {
   try {
-    localStorage.setItem('hoeslys_iso_v2', JSON.stringify({
-      points, timestamp: Date.now(), maxMin: CONFIG.maxDriveMin, numAngles: CONFIG.numAngles
+    localStorage.setItem('hoeslys_iso_v3', JSON.stringify({
+      boundaries, timestamp: Date.now(), maxMin: CONFIG.maxDriveMin, numAngles: CONFIG.numAngles
     }));
   } catch {}
 }
@@ -407,36 +410,37 @@ async function computeIsochrone(onProgress) {
     }
   }
 
-  // Interpolate 60-min boundary for each angle
-  const boundary = [];
-  angles.forEach(angle => {
-    const samples = samplesByAngle[angle].sort((a, b) => a.miles - b.miles);
-    let boundaryPt = samples[samples.length - 1].pt;
+  // Interpolate boundary for each time threshold using the same sample data
+  const thresholds = [15, 30, 45, 60];
+  const boundaries = {};
+  thresholds.forEach(maxMin => {
+    boundaries[maxMin] = [];
+    angles.forEach(angle => {
+      const samples = samplesByAngle[angle].sort((a, b) => a.miles - b.miles);
+      let boundaryPt = samples[samples.length - 1].pt;
 
-    // If even the closest point is >60 min, use a very close point
-    if (samples[0].driveMin > CONFIG.maxDriveMin) {
-      boundaryPt = destPoint(CONFIG.store.lat, CONFIG.store.lng, angle, 5000);
-    } else {
-      // Find bracket and interpolate
-      for (let i = 0; i < samples.length - 1; i++) {
-        if (samples[i].driveMin <= CONFIG.maxDriveMin && samples[i+1].driveMin > CONFIG.maxDriveMin) {
-          const t = (CONFIG.maxDriveMin - samples[i].driveMin) / (samples[i+1].driveMin - samples[i].driveMin);
-          boundaryPt = {
-            lat: samples[i].pt.lat + t * (samples[i+1].pt.lat - samples[i].pt.lat),
-            lng: samples[i].pt.lng + t * (samples[i+1].pt.lng - samples[i].pt.lng)
-          };
-          break;
+      if (samples[0].driveMin > maxMin) {
+        boundaryPt = destPoint(CONFIG.store.lat, CONFIG.store.lng, angle, 5000);
+      } else {
+        for (let i = 0; i < samples.length - 1; i++) {
+          if (samples[i].driveMin <= maxMin && samples[i + 1].driveMin > maxMin) {
+            const t = (maxMin - samples[i].driveMin) / (samples[i + 1].driveMin - samples[i].driveMin);
+            boundaryPt = {
+              lat: samples[i].pt.lat + t * (samples[i + 1].pt.lat - samples[i].pt.lat),
+              lng: samples[i].pt.lng + t * (samples[i + 1].pt.lng - samples[i].pt.lng)
+            };
+            break;
+          }
+        }
+        if (samples[samples.length - 1].driveMin <= maxMin) {
+          boundaryPt = samples[samples.length - 1].pt;
         }
       }
-      // If all samples are under 60 min, use the outermost
-      if (samples[samples.length-1].driveMin <= CONFIG.maxDriveMin) {
-        boundaryPt = samples[samples.length-1].pt;
-      }
-    }
-    boundary.push(boundaryPt);
+      boundaries[maxMin].push(boundaryPt);
+    });
   });
 
-  return boundary;
+  return boundaries;
 }
 
 // ================================================================
@@ -445,20 +449,32 @@ async function computeIsochrone(onProgress) {
 function drawZones() {
   if (!isoReady) return;
 
-  const sortedIso = [...isochronePoints].sort((a, b) => {
-    const aa = Math.atan2(a.lng - CONFIG.store.lng, a.lat - CONFIG.store.lat);
-    const ab = Math.atan2(b.lng - CONFIG.store.lng, b.lat - CONFIG.store.lat);
-    return aa - ab;
-  });
+  // Draw largest ring first so smaller ones render on top
+  const rings = [
+    { minutes: 60, color: '#D4A898', fillOpacity: 0.18, strokeOpacity: 0.4 },
+    { minutes: 45, color: '#C97B5E', fillOpacity: 0.22, strokeOpacity: 0.5 },
+    { minutes: 30, color: '#B44B3A', fillOpacity: 0.26, strokeOpacity: 0.6 },
+    { minutes: 15, color: '#7B2D1E', fillOpacity: 0.32, strokeOpacity: 0.7 },
+  ];
 
-  if (sortedIso.length >= 3) {
-    new google.maps.Polygon({
-      paths: sortedIso,
-      strokeColor: '#7B2D1E', strokeWeight: 2, strokeOpacity: 0.7,
-      fillColor: '#7B2D1E', fillOpacity: 0.10,
-      map: gmap
+  function sortByAngle(pts) {
+    return [...pts].sort((a, b) => {
+      const aa = Math.atan2(a.lng - CONFIG.store.lng, a.lat - CONFIG.store.lat);
+      const ab = Math.atan2(b.lng - CONFIG.store.lng, b.lat - CONFIG.store.lat);
+      return aa - ab;
     });
   }
+
+  rings.forEach(ring => {
+    const pts = isochronePoints[ring.minutes];
+    if (!pts || pts.length < 3) return;
+    new google.maps.Polygon({
+      paths: sortByAngle(pts),
+      strokeColor: ring.color, strokeWeight: 1.5, strokeOpacity: ring.strokeOpacity,
+      fillColor: ring.color, fillOpacity: ring.fillOpacity,
+      map: gmap
+    });
+  });
 
   new google.maps.marker.AdvancedMarkerElement({
     position: CONFIG.store,
@@ -467,9 +483,10 @@ function drawZones() {
     content: buildStorePin()
   });
 
-  if (isochronePoints.length) {
+  const outer = isochronePoints[60];
+  if (outer && outer.length) {
     const bounds = new google.maps.LatLngBounds();
-    isochronePoints.forEach(p => bounds.extend(p));
+    outer.forEach(p => bounds.extend(p));
     gmap.fitBounds(bounds, 40);
   }
 }
