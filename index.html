@@ -147,9 +147,8 @@
     <div class="map-title-bar">
       <h2>Our delivery area</h2>
       <div class="map-legend">
-        <span><span class="dot" style="background:var(--north)"></span> North of Hwy 39</span>
-        <span><span class="dot" style="background:var(--south)"></span> South of Hwy 39</span>
-        <span><span class="dot" style="background:var(--brand)"></span> Store</span>
+        <span><span class="dot" style="background:var(--brand)"></span> Delivery area</span>
+        <span><span class="dot" style="background:var(--brand-dark)"></span> Store</span>
       </div>
     </div>
     <div id="map-wrap">
@@ -446,58 +445,21 @@ async function computeIsochrone(onProgress) {
 function drawZones() {
   if (!isoReady) return;
 
-  // Sort all boundary points by angle from the store center first
   const sortedIso = [...isochronePoints].sort((a, b) => {
     const aa = Math.atan2(a.lng - CONFIG.store.lng, a.lat - CONFIG.store.lat);
     const ab = Math.atan2(b.lng - CONFIG.store.lng, b.lat - CONFIG.store.lat);
     return aa - ab;
   });
 
-  // Split into north/south preserving the sorted angular order
-  const northBoundary = sortedIso.filter(pt => isNorthOfHwy39(pt.lat, pt.lng));
-  const southBoundary = sortedIso.filter(pt => !isNorthOfHwy39(pt.lat, pt.lng));
-
-  // Build a Hwy 39 closure segment sorted west→east within the isochrone extent
-  let hwyPts = [];
-  if (hwyReady) {
-    const lngs = sortedIso.map(p => p.lng);
-    const minLng = Math.min(...lngs) - 0.02, maxLng = Math.max(...lngs) + 0.02;
-    const hwyInRange = hwy39Path.filter(p => p.lng >= minLng && p.lng <= maxLng);
-    const step = Math.max(1, Math.floor(hwyInRange.length / 30));
-    for (let i = 0; i < hwyInRange.length; i += step) hwyPts.push(hwyInRange[i]);
-    hwyPts.sort((a, b) => a.lng - b.lng);
-  }
-
-  // North polygon: boundary arc + hwy39 east→west closes the bottom edge
-  if (northBoundary.length >= 3) {
+  if (sortedIso.length >= 3) {
     new google.maps.Polygon({
-      paths: [...northBoundary, ...[...hwyPts].reverse()],
-      strokeColor: '#2B6590', strokeWeight: 2, strokeOpacity: 0.7,
-      fillColor: '#2B6590', fillOpacity: 0.10,
+      paths: sortedIso,
+      strokeColor: '#7B2D1E', strokeWeight: 2, strokeOpacity: 0.7,
+      fillColor: '#7B2D1E', fillOpacity: 0.10,
       map: gmap
     });
   }
 
-  // South polygon: boundary arc + hwy39 west→east closes the top edge
-  if (southBoundary.length >= 3) {
-    new google.maps.Polygon({
-      paths: [...southBoundary, ...hwyPts],
-      strokeColor: '#1E7A56', strokeWeight: 2, strokeOpacity: 0.7,
-      fillColor: '#1E7A56', fillOpacity: 0.10,
-      map: gmap
-    });
-  }
-
-  // Highway 39 dividing line
-  if (hwyReady) {
-    new google.maps.Polyline({
-      path: hwy39Path,
-      strokeColor: '#B44B3A', strokeWeight: 3, strokeOpacity: 0.6,
-      map: gmap
-    });
-  }
-
-  // Store marker
   new google.maps.marker.AdvancedMarkerElement({
     position: CONFIG.store,
     map: gmap,
@@ -505,7 +467,6 @@ function drawZones() {
     content: buildStorePin()
   });
 
-  // Fit to isochrone
   if (isochronePoints.length) {
     const bounds = new google.maps.LatLngBounds();
     isochronePoints.forEach(p => bounds.extend(p));
