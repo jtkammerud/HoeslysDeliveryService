@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delivery Service — Hoesly's Meats | New Glarus, WI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #FDFCF9; --surface: #FFFFFF; --surface-warm: #F7F4EE;
+    --text: #2C2417; --text-mid: #5C5242; --text-light: #8A7F6E;
+    --border: #E6E0D4;
+    --brand: #7B2D1E; --brand-dark: #5C2016; --brand-light: #F6EBE8;
+    --north: #2B6590; --north-bg: #E6F0F8; --north-dark: #1B4565;
+    --south: #1E7A56; --south-bg: #E3F2EB; --south-dark: #145A3E;
+    --outside: #B44B3A; --outside-bg: #FDF0EE;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+  .site-header { background: var(--brand-dark); color: #fff; padding: 0.75rem 2rem; display: flex; align-items: center; justify-content: space-between; font-size: 13px; flex-wrap: wrap; gap: 8px; }
+  .site-header a { color: rgba(255,255,255,0.7); text-decoration: none; }
+  .site-header a:hover { color: #fff; }
+
+  .hero { background: linear-gradient(170deg, var(--brand-dark) 0%, var(--brand) 100%); color: #fff; padding: 3rem 2rem 2.5rem; text-align: center; }
+  .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(28px, 5vw, 40px); font-weight: 500; margin-bottom: 0.5rem; }
+  .hero p { font-size: 15px; opacity: 0.8; max-width: 520px; margin: 0 auto 2rem; }
+
+  .search-box { max-width: 600px; margin: 0 auto; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .search-box label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; margin-bottom: 8px; }
+  .search-row { display: flex; gap: 8px; }
+  .search-row input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 12px 16px; border: none; border-radius: var(--radius); background: #fff; color: var(--text); outline: none; }
+  .search-row input::placeholder { color: #B5AD9E; }
+  .search-row button { font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; padding: 12px 28px; border: none; border-radius: var(--radius); background: #fff; color: var(--brand); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .search-row button:hover { background: #F5F2ED; }
+  .search-row button:disabled { opacity: 0.6; cursor: wait; }
+
+  .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(123,45,30,0.2); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  .result-card { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1.5rem; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .result-card.visible { display: block; }
+  .result-header { padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 14px; }
+  .result-header.north { background: var(--north-bg); }
+  .result-header.south { background: var(--south-bg); }
+  .result-header.out { background: var(--outside-bg); }
+  .result-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; color: #fff; }
+  .result-header.north .result-icon { background: var(--north); }
+  .result-header.south .result-icon { background: var(--south); }
+  .result-header.out .result-icon { background: var(--outside); }
+  .result-title { font-size: 17px; font-weight: 600; }
+  .result-header.north .result-title { color: var(--north-dark); }
+  .result-header.south .result-title { color: var(--south-dark); }
+  .result-header.out .result-title { color: var(--outside); }
+  .result-subtitle { font-size: 13px; color: var(--text-mid); margin-top: 2px; }
+
+  .result-body { padding: 1.25rem 1.5rem; }
+  .quote-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 1rem; }
+  .quote-item { background: var(--surface-warm); border-radius: var(--radius); padding: 14px 16px; text-align: center; }
+  .quote-item .q-value { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .quote-item .q-value.price { color: var(--brand); }
+  .quote-item .q-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin-top: 4px; }
+  .quote-breakdown { font-size: 13px; color: var(--text-mid); padding: 10px 14px; background: var(--surface-warm); border-radius: var(--radius); margin-bottom: 1rem; }
+  .result-note { font-size: 13px; color: var(--text-mid); padding: 12px 14px; background: var(--surface-warm); border-radius: var(--radius); line-height: 1.5; }
+  .result-note strong { color: var(--text); }
+  .result-out-msg { font-size: 14px; color: var(--text-mid); line-height: 1.6; }
+
+  .map-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1.5rem; }
+  .map-title-bar { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .map-title-bar h2 { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 500; }
+  .map-legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-mid); flex-wrap: wrap; }
+  .map-legend span { display: flex; align-items: center; gap: 5px; }
+  .map-legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+  #map-wrap { position: relative; height: 460px; }
+  #gmap { width: 100%; height: 100%; }
+  .map-overlay { position: absolute; inset: 0; background: rgba(253,252,249,0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; z-index: 5; transition: opacity 0.4s; }
+  .map-overlay.hidden { opacity: 0; pointer-events: none; }
+  .map-overlay .mo-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  .map-overlay .mo-text { font-size: 14px; color: var(--text-mid); font-weight: 500; }
+  .map-overlay .mo-sub { font-size: 12px; color: var(--text-light); }
+  .map-progress { width: 180px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .map-progress .fill { height: 100%; background: var(--brand); border-radius: 2px; transition: width 0.3s; width: 0%; }
+
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; }
+  .info-card .ic-icon { width: 40px; height: 40px; background: var(--brand-light); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; color: var(--brand); font-weight: 700; }
+  .info-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .info-card p { font-size: 13px; color: var(--text-mid); line-height: 1.6; }
+
+  .pricing-note { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; }
+  .pricing-note h2 { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 500; margin-bottom: 0.75rem; }
+  .pricing-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .pricing-table td { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .pricing-table tr:last-child td { border-bottom: none; }
+  .pricing-table td:first-child { color: var(--text-mid); }
+  .pricing-table td:last-child { text-align: right; font-weight: 600; }
+
+  .footer { text-align: center; padding: 2rem; font-size: 12px; color: var(--text-light); border-top: 1px solid var(--border); margin-top: 1rem; }
+  .footer a { color: var(--brand); text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .hero { padding: 2rem 1rem 1.5rem; }
+    .search-row { flex-direction: column; }
+    .search-row button { width: 100%; }
+    .main { padding: 1.25rem 1rem; }
+    #map-wrap { height: 340px; }
+    .quote-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <span>Hoesly's Meats &mdash; New Glarus, WI</span>
+  <a href="https://www.google.com/maps/place/Hoesly's+Meats/@42.8205775,-89.6309971,15z" target="_blank" rel="noopener">View store on Google Maps &rarr;</a>
+</div>
+
+<div class="hero">
+  <h1>Meat delivery to your door</h1>
+  <p>Fresh from our store in New Glarus, delivered within a 60-minute drive of the shop. Enter your address to check availability and get an instant delivery quote.</p>
+  <div class="search-box">
+    <label>Your delivery address</label>
+    <div class="search-row">
+      <input type="text" id="addr-input" placeholder="e.g. 123 Main St, Madison, WI" />
+      <button id="check-btn" onclick="checkAddress()">Get quote</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="result-card" id="result-card">
+    <div class="result-header" id="result-header">
+      <div class="result-icon" id="result-icon"></div>
+      <div>
+        <div class="result-title" id="result-title"></div>
+        <div class="result-subtitle" id="result-subtitle"></div>
+      </div>
+    </div>
+    <div class="result-body" id="result-body"></div>
+  </div>
+
+  <div class="map-section">
+    <div class="map-title-bar">
+      <h2>Our delivery area</h2>
+      <div class="map-legend">
+        <span><span class="dot" style="background:var(--north)"></span> North of Hwy 39</span>
+        <span><span class="dot" style="background:var(--south)"></span> South of Hwy 39</span>
+        <span><span class="dot" style="background:var(--brand)"></span> Store</span>
+      </div>
+    </div>
+    <div id="map-wrap">
+      <div class="map-overlay" id="map-overlay">
+        <div class="mo-spinner"></div>
+        <div class="mo-text">Mapping drive-time delivery zones</div>
+        <div class="mo-sub" id="map-status">Computing real driving times from the store...</div>
+        <div class="map-progress"><div class="fill" id="map-progress"></div></div>
+      </div>
+      <div id="gmap"></div>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="ic-icon">1</div>
+      <h3>Place your order</h3>
+      <p>Order through our store as usual — in person, by phone, or through our ordering system. Let us know you'd like delivery.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">2</div>
+      <h3>We'll schedule your delivery</h3>
+      <p>We'll contact you to arrange a delivery date and give you an estimated time window so you know when to expect us.</p>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">3</div>
+      <h3>Be home for delivery</h3>
+      <p>Since we deliver perishable meat products, <strong>someone must be home to receive the order</strong>. We cannot leave deliveries unattended.</p>
+    </div>
+  </div>
+
+  <div class="pricing-note">
+    <h2>Delivery pricing</h2>
+    <table class="pricing-table">
+      <tr><td>Base delivery fee</td><td id="p-base"></td></tr>
+      <tr><td>Included distance</td><td id="p-free"></td></tr>
+      <tr><td>Additional mileage charge</td><td id="p-mile"></td></tr>
+      <tr><td>Maximum delivery range</td><td>60 minutes from store</td></tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    Hoesly's Meats &middot; 219 Industrial Dr, New Glarus, WI 53574<br>
+    Delivery zones computed using Google Maps driving times. Estimates may vary with traffic and road conditions.<br>
+    <a href="https://www.google.com/maps/place/Hoesly's+Meats/" target="_blank">Google Maps</a>
+  </div>
+</div>
+
+<!--
+  ================================================================
+  GOOGLE MAPS API
+  ================================================================
+  IMPORTANT: Before going live, restrict this API key to your
+  website domain in Google Cloud Console:
+  https://console.cloud.google.com/apis/credentials
+  
+  Required APIs to enable in your Google Cloud project:
+  - Maps JavaScript API
+  - Geocoding API
+  - Directions API
+  - Distance Matrix API
+  ================================================================
+-->
+<script>
+// ================================================================
+// CONFIGURATION — Edit these values to adjust pricing and zones
+// ================================================================
+const CONFIG = {
+  store: { lat: 42.8205775, lng: -89.6309971 },
+  maxDriveMin: 60,
+
+  // PRICING — adjust these to set your delivery fees
+  baseFee: 10.00,
+  perMileRate: 0.75,
+  freeRadiusMiles: 10,
+
+  // ISOCHRONE — how accurately to map the delivery boundary
+  numAngles: 28,
+  ringsMiles: [8, 16, 24, 32, 42, 55],
+
+  // CACHE — how long to remember computed zones (milliseconds)
+  cacheDurationMs: 30 * 24 * 60 * 60 * 1000, // 30 days
+
+  // HIGHWAY 39 WAYPOINTS (lat, lng) west to east
+  hwy39: [
+    { lat: 42.970, lng: -90.300 },
+    { lat: 42.935, lng: -90.210 },
+    { lat: 42.860, lng: -90.180 },
+    { lat: 42.877, lng: -90.000 },
+    { lat: 42.825, lng: -89.860 },
+    { lat: 42.816, lng: -89.740 },
+    { lat: 42.813, lng: -89.635 },
+  ]
+};
+
+// ================================================================
+// STATE
+// ================================================================
+let gmap, geocoder, directionsService, distMatrixService, directionsRenderer;
+let hwy39Path = [];
+let isochronePoints = [];
+let isoReady = false, hwyReady = false;
+let custMarker = null;
+
+// ================================================================
+// GEO MATH
+// ================================================================
+function destPoint(lat, lng, bearing, distMeters) {
+  const R = 6371000, d = distMeters / R, b = bearing * Math.PI / 180;
+  const la = lat * Math.PI / 180, lo = lng * Math.PI / 180;
+  const la2 = Math.asin(Math.sin(la)*Math.cos(d) + Math.cos(la)*Math.sin(d)*Math.cos(b));
+  const lo2 = lo + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(la), Math.cos(d)-Math.sin(la)*Math.sin(la2));
+  return { lat: la2*180/Math.PI, lng: lo2*180/Math.PI };
+}
+
+// ================================================================
+// HIGHWAY 39 — N/S ZONE DIVIDER
+// ================================================================
+async function loadHwy39() {
+  return new Promise((resolve) => {
+    directionsService.route({
+      origin: CONFIG.hwy39[0],
+      destination: CONFIG.hwy39[CONFIG.hwy39.length - 1],
+      waypoints: CONFIG.hwy39.slice(1, -1).map(p => ({ location: p, stopover: false })),
+      travelMode: google.maps.TravelMode.DRIVING
+    }, (result, status) => {
+      if (status === 'OK') {
+        // Extract the full path from the route
+        const route = result.routes[0];
+        hwy39Path = [];
+        route.legs.forEach(leg => {
+          leg.steps.forEach(step => {
+            step.path.forEach(p => {
+              hwy39Path.push({ lat: p.lat(), lng: p.lng() });
+            });
+          });
+        });
+        hwyReady = true;
+      }
+      resolve();
+    });
+  });
+}
+
+function isNorthOfHwy39(lat, lng) {
+  if (!hwyReady || hwy39Path.length < 2) return lat >= CONFIG.store.lat;
+
+  // Find closest point on highway by longitude
+  let closestIdx = 0, closestDist = Infinity;
+  for (let i = 0; i < hwy39Path.length; i++) {
+    const d = Math.abs(hwy39Path[i].lng - lng);
+    if (d < closestDist) { closestDist = d; closestIdx = i; }
+  }
+
+  // Interpolate highway latitude at customer's longitude
+  let hwyLat = hwy39Path[closestIdx].lat;
+  if (closestIdx > 0 && closestIdx < hwy39Path.length - 1) {
+    const prev = hwy39Path[closestIdx - 1];
+    const curr = hwy39Path[closestIdx];
+    const next = hwy39Path[closestIdx + 1];
+    if ((prev.lng <= lng && curr.lng >= lng) || (prev.lng >= lng && curr.lng <= lng)) {
+      const t = (lng - prev.lng) / ((curr.lng - prev.lng) || 0.0001);
+      hwyLat = prev.lat + t * (curr.lat - prev.lat);
+    } else if ((curr.lng <= lng && next.lng >= lng) || (curr.lng >= lng && next.lng <= lng)) {
+      const t = (lng - curr.lng) / ((next.lng - curr.lng) || 0.0001);
+      hwyLat = curr.lat + t * (next.lat - curr.lat);
+    }
+  }
+  return lat >= hwyLat;
+}
+
+// ================================================================
+// ISOCHRONE — Google Distance Matrix in batches
+// ================================================================
+function getCachedIsochrone() {
+  try {
+    const raw = localStorage.getItem('hoeslys_isochrone');
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (Date.now() - cached.timestamp > CONFIG.cacheDurationMs) return null;
+    if (cached.maxMin !== CONFIG.maxDriveMin) return null;
+    return cached.points;
+  } catch { return null; }
+}
+
+function setCachedIsochrone(points) {
+  try {
+    localStorage.setItem('hoeslys_isochrone', JSON.stringify({
+      points, timestamp: Date.now(), maxMin: CONFIG.maxDriveMin
+    }));
+  } catch {}
+}
+
+async function computeIsochrone(onProgress) {
+  const angles = [];
+  for (let i = 0; i < CONFIG.numAngles; i++) angles.push(i * (360 / CONFIG.numAngles));
+
+  // Generate sample points: angles × distance rings
+  const samplesByAngle = {};
+  angles.forEach(a => samplesByAngle[a] = []);
+
+  const allSamples = [];
+  CONFIG.ringsMiles.forEach(miles => {
+    const meters = miles * 1609.34;
+    angles.forEach(angle => {
+      const pt = destPoint(CONFIG.store.lat, CONFIG.store.lng, angle, meters);
+      allSamples.push({ angle, miles, pt });
+    });
+  });
+
+  // Batch into groups of 25 (Google DM limit)
+  const batchSize = 25;
+  const totalBatches = Math.ceil(allSamples.length / batchSize);
+  let batchesDone = 0;
+
+  for (let b = 0; b < allSamples.length; b += batchSize) {
+    const batch = allSamples.slice(b, b + batchSize);
+    const destinations = batch.map(s => new google.maps.LatLng(s.pt.lat, s.pt.lng));
+
+    const response = await new Promise((resolve, reject) => {
+      distMatrixService.getDistanceMatrix({
+        origins: [new google.maps.LatLng(CONFIG.store.lat, CONFIG.store.lng)],
+        destinations: destinations,
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.IMPERIAL
+      }, (res, status) => {
+        if (status === 'OK') resolve(res);
+        else reject(new Error('Distance Matrix: ' + status));
+      });
+    });
+
+    batch.forEach((sample, i) => {
+      const el = response.rows[0].elements[i];
+      const driveMin = (el.status === 'OK') ? el.duration.value / 60 : 999;
+      samplesByAngle[sample.angle].push({
+        miles: sample.miles, driveMin, pt: sample.pt
+      });
+    });
+
+    batchesDone++;
+    if (onProgress) onProgress(batchesDone, totalBatches);
+
+    // Rate-limit pause between batches
+    if (b + batchSize < allSamples.length) {
+      await new Promise(r => setTimeout(r, 350));
+    }
+  }
+
+  // Interpolate 60-min boundary for each angle
+  const boundary = [];
+  angles.forEach(angle => {
+    const samples = samplesByAngle[angle].sort((a, b) => a.miles - b.miles);
+    let boundaryPt = samples[samples.length - 1].pt;
+
+    // If even the closest point is >60 min, use a very close point
+    if (samples[0].driveMin > CONFIG.maxDriveMin) {
+      boundaryPt = destPoint(CONFIG.store.lat, CONFIG.store.lng, angle, 5000);
+    } else {
+      // Find bracket and interpolate
+      for (let i = 0; i < samples.length - 1; i++) {
+        if (samples[i].driveMin <= CONFIG.maxDriveMin && samples[i+1].driveMin > CONFIG.maxDriveMin) {
+          const t = (CONFIG.maxDriveMin - samples[i].driveMin) / (samples[i+1].driveMin - samples[i].driveMin);
+          boundaryPt = {
+            lat: samples[i].pt.lat + t * (samples[i+1].pt.lat - samples[i].pt.lat),
+            lng: samples[i].pt.lng + t * (samples[i+1].pt.lng - samples[i].pt.lng)
+          };
+          break;
+        }
+      }
+      // If all samples are under 60 min, use the outermost
+      if (samples[samples.length-1].driveMin <= CONFIG.maxDriveMin) {
+        boundaryPt = samples[samples.length-1].pt;
+      }
+    }
+    boundary.push(boundaryPt);
+  });
+
+  return boundary;
+}
+
+// ================================================================
+// MAP DRAWING
+// ================================================================
+function drawZones() {
+  if (!isoReady) return;
+
+  // Split isochrone into north/south based on Hwy 39
+  const northPts = [], southPts = [];
+  isochronePoints.forEach(pt => {
+    if (isNorthOfHwy39(pt.lat, pt.lng)) northPts.push(pt);
+    else southPts.push(pt);
+  });
+
+  // Add Hwy 39 edge points to both polygons for clean closure
+  if (hwyReady) {
+    const lngs = isochronePoints.map(p => p.lng);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const hwyInRange = hwy39Path.filter(p => p.lng >= minLng - 0.02 && p.lng <= maxLng + 0.02);
+    const step = Math.max(1, Math.floor(hwyInRange.length / 24));
+    for (let i = 0; i < hwyInRange.length; i += step) {
+      northPts.push(hwyInRange[i]);
+      southPts.push(hwyInRange[i]);
+    }
+  }
+
+  function sortByAngle(pts) {
+    return pts.sort((a, b) => {
+      const aa = Math.atan2(a.lng - CONFIG.store.lng, a.lat - CONFIG.store.lat);
+      const ab = Math.atan2(b.lng - CONFIG.store.lng, b.lat - CONFIG.store.lat);
+      return aa - ab;
+    });
+  }
+
+  // North zone polygon
+  if (northPts.length >= 3) {
+    new google.maps.Polygon({
+      paths: sortByAngle(northPts),
+      strokeColor: '#2B6590', strokeWeight: 2, strokeOpacity: 0.7,
+      fillColor: '#2B6590', fillOpacity: 0.10,
+      map: gmap
+    });
+  }
+
+  // South zone polygon
+  if (southPts.length >= 3) {
+    new google.maps.Polygon({
+      paths: sortByAngle(southPts),
+      strokeColor: '#1E7A56', strokeWeight: 2, strokeOpacity: 0.7,
+      fillColor: '#1E7A56', fillOpacity: 0.10,
+      map: gmap
+    });
+  }
+
+  // Highway 39 dividing line
+  if (hwyReady) {
+    new google.maps.Polyline({
+      path: hwy39Path,
+      strokeColor: '#B44B3A', strokeWeight: 3, strokeOpacity: 0.6,
+      map: gmap
+    });
+  }
+
+  // Store marker
+  new google.maps.marker.AdvancedMarkerElement({
+    position: CONFIG.store,
+    map: gmap,
+    title: "Hoesly's Meats — 219 Industrial Dr, New Glarus, WI",
+    content: buildStorePin()
+  });
+
+  // Fit to isochrone
+  if (isochronePoints.length) {
+    const bounds = new google.maps.LatLngBounds();
+    isochronePoints.forEach(p => bounds.extend(p));
+    gmap.fitBounds(bounds, 40);
+  }
+}
+
+function buildStorePin() {
+  const div = document.createElement('div');
+  div.style.cssText = 'width:20px;height:20px;background:#7B2D1E;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);';
+  return div;
+}
+
+function buildCustomerPin(color) {
+  const div = document.createElement('div');
+  div.style.cssText = `width:14px;height:14px;background:${color};border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
+  return div;
+}
+
+// ================================================================
+// PRICING
+// ================================================================
+function calcFee(miles) {
+  const extra = Math.max(0, miles - CONFIG.freeRadiusMiles);
+  return CONFIG.baseFee + extra * CONFIG.perMileRate;
+}
+
+// ================================================================
+// ADDRESS LOOKUP
+// ================================================================
+async function checkAddress() {
+  const input = document.getElementById('addr-input');
+  const btn = document.getElementById('check-btn');
+  const card = document.getElementById('result-card');
+  const addr = input.value.trim();
+  if (!addr) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span>Checking';
+  card.classList.remove('visible');
+
+  try {
+    // Geocode
+    const geo = await new Promise((resolve, reject) => {
+      geocoder.geocode({ address: addr, componentRestrictions: { country: 'US' } }, (results, status) => {
+        if (status === 'OK' && results.length) resolve(results[0]);
+        else reject(new Error('Address not found'));
+      });
+    });
+
+    const loc = geo.geometry.location;
+    const formattedAddr = geo.formatted_address;
+
+    // Get directions from store
+    const route = await new Promise((resolve, reject) => {
+      directionsService.route({
+        origin: CONFIG.store,
+        destination: loc,
+        travelMode: google.maps.TravelMode.DRIVING
+      }, (result, status) => {
+        if (status === 'OK') resolve(result);
+        else reject(new Error('Route not found'));
+      });
+    });
+
+    const leg = route.routes[0].legs[0];
+    const driveMin = Math.round(leg.duration.value / 60);
+    const driveMiles = Math.round(leg.distance.value / 1609.34 * 10) / 10;
+    const inZone = driveMin <= CONFIG.maxDriveMin;
+    const north = isNorthOfHwy39(loc.lat(), loc.lng());
+    const zone = inZone ? (north ? 'north' : 'south') : 'out';
+
+    // Show route on map
+    if (custMarker) custMarker.map = null;
+    directionsRenderer.setDirections(route);
+    directionsRenderer.setOptions({
+      polylineOptions: {
+        strokeColor: zone === 'north' ? '#2B6590' : zone === 'south' ? '#1E7A56' : '#B44B3A',
+        strokeWeight: 4, strokeOpacity: 0.7
+      },
+      suppressMarkers: true
+    });
+
+    const colors = { north: '#2B6590', south: '#1E7A56', out: '#B44B3A' };
+    custMarker = new google.maps.marker.AdvancedMarkerElement({
+      position: loc,
+      map: gmap,
+      title: formattedAddr,
+      content: buildCustomerPin(colors[zone])
+    });
+
+    // Build result
+    const header = document.getElementById('result-header');
+    const icon = document.getElementById('result-icon');
+    const title = document.getElementById('result-title');
+    const subtitle = document.getElementById('result-subtitle');
+    const body = document.getElementById('result-body');
+
+    header.className = 'result-header ' + zone;
+    subtitle.textContent = formattedAddr;
+
+    if (inZone) {
+      const fee = calcFee(driveMiles);
+      const zoneLabel = north ? 'North' : 'South';
+      const roundMiles = Math.round(driveMiles);
+      const extraMiles = Math.max(0, roundMiles - CONFIG.freeRadiusMiles);
+
+      icon.textContent = '✓';
+      title.textContent = `You're in the ${zoneLabel} delivery zone!`;
+
+      let breakdownText = `Base fee: $${CONFIG.baseFee.toFixed(2)}`;
+      if (extraMiles > 0) {
+        breakdownText += ` + ${extraMiles} additional mi × $${CONFIG.perMileRate.toFixed(2)} = $${(extraMiles * CONFIG.perMileRate).toFixed(2)}`;
+      } else {
+        breakdownText += ` (within ${CONFIG.freeRadiusMiles}-mile included radius)`;
+      }
+
+      body.innerHTML = `
+        <div class="quote-grid">
+          <div class="quote-item"><div class="q-value price">$${fee.toFixed(2)}</div><div class="q-label">Delivery fee</div></div>
+          <div class="quote-item"><div class="q-value">${driveMin} min</div><div class="q-label">Drive time</div></div>
+          <div class="quote-item"><div class="q-value">${roundMiles} mi</div><div class="q-label">Distance</div></div>
+          <div class="quote-item"><div class="q-value">${zoneLabel}</div><div class="q-label">Zone (${north ? 'N of' : 'S of'} Hwy 39)</div></div>
+        </div>
+        <div class="quote-breakdown">${breakdownText}</div>
+        <div class="result-note">
+          <strong>Next steps:</strong> Place your order through our store, then we'll contact you to arrange a delivery date and provide an estimated delivery window.
+          <strong>Someone must be home</strong> to receive the delivery — we cannot leave perishable products unattended.
+        </div>`;
+    } else {
+      icon.textContent = '✗';
+      title.textContent = 'Outside our delivery area';
+      body.innerHTML = `<div class="result-out-msg">
+        Your location is <strong>${driveMin} minutes</strong> (${Math.round(driveMiles)} miles) from our store, which is beyond our ${CONFIG.maxDriveMin}-minute delivery range.<br><br>
+        Please contact us directly to discuss special delivery arrangements for longer distances, or visit us at the store in New Glarus.</div>`;
+    }
+    card.classList.add('visible');
+
+  } catch (e) {
+    document.getElementById('result-header').className = 'result-header out';
+    document.getElementById('result-icon').textContent = '?';
+    document.getElementById('result-title').textContent = 'Address not found';
+    document.getElementById('result-subtitle').textContent = '';
+    document.getElementById('result-body').innerHTML = '<div class="result-out-msg">We couldn\'t find that address. Please try including the full street address, city, and state (e.g. "123 Main St, Madison, WI").</div>';
+    document.getElementById('result-card').classList.add('visible');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Get quote';
+}
+
+// ================================================================
+// GOOGLE PLACES AUTOCOMPLETE
+// ================================================================
+function setupAutocomplete() {
+  const input = document.getElementById('addr-input');
+  const autocomplete = new google.maps.places.Autocomplete(input, {
+    componentRestrictions: { country: 'us' },
+    types: ['address'],
+    fields: ['formatted_address', 'geometry']
+  });
+  autocomplete.addListener('place_changed', () => {
+    const place = autocomplete.getPlace();
+    if (place.formatted_address) {
+      input.value = place.formatted_address;
+      checkAddress();
+    }
+  });
+}
+
+// ================================================================
+// INIT
+// ================================================================
+function initApp() {
+  // Pricing table
+  document.getElementById('p-base').textContent = '$' + CONFIG.baseFee.toFixed(2);
+  document.getElementById('p-free').textContent = 'First ' + CONFIG.freeRadiusMiles + ' miles';
+  document.getElementById('p-mile').textContent = '$' + CONFIG.perMileRate.toFixed(2) + ' per mile';
+
+  // Google services
+  geocoder = new google.maps.Geocoder();
+  directionsService = new google.maps.DirectionsService();
+  distMatrixService = new google.maps.DistanceMatrixService();
+
+  // Map
+  gmap = new google.maps.Map(document.getElementById('gmap'), {
+    center: CONFIG.store,
+    zoom: 9,
+    mapId: 'DELIVERY_MAP',
+    disableDefaultUI: false,
+    zoomControl: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: true,
+    styles: [
+      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+      { featureType: 'water', stylers: [{ color: '#c9e4f4' }] },
+      { featureType: 'landscape', stylers: [{ color: '#f2efe8' }] },
+      { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#e0d8c8' }] },
+      { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#ebe5d9' }] }
+    ]
+  });
+
+  directionsRenderer = new google.maps.DirectionsRenderer({
+    map: gmap,
+    suppressMarkers: true,
+    preserveViewport: true,
+    polylineOptions: { strokeWeight: 4, strokeOpacity: 0.7 }
+  });
+
+  // Autocomplete
+  setupAutocomplete();
+
+  // Enter key
+  document.getElementById('addr-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); checkAddress(); }
+  });
+
+  // Load zones
+  loadZones();
+}
+
+async function loadZones() {
+  const overlay = document.getElementById('map-overlay');
+  const statusEl = document.getElementById('map-status');
+  const progressEl = document.getElementById('map-progress');
+
+  // Load Highway 39 route
+  statusEl.textContent = 'Tracing Highway 39 route...';
+  progressEl.style.width = '10%';
+  await loadHwy39();
+
+  // Check for cached isochrone
+  const cached = getCachedIsochrone();
+  if (cached) {
+    statusEl.textContent = 'Loading cached delivery zones...';
+    progressEl.style.width = '90%';
+    isochronePoints = cached;
+    isoReady = true;
+  } else {
+    statusEl.textContent = 'Computing drive times (one-time setup)...';
+    progressEl.style.width = '15%';
+    try {
+      isochronePoints = await computeIsochrone((done, total) => {
+        const pct = 15 + Math.round((done / total) * 80);
+        progressEl.style.width = pct + '%';
+        statusEl.textContent = `Sampling driving times... batch ${done} of ${total}`;
+      });
+      isoReady = true;
+      setCachedIsochrone(isochronePoints);
+    } catch (e) {
+      console.error('Isochrone error:', e);
+      statusEl.textContent = 'Zone computation encountered an error. Address lookups still work.';
+    }
+  }
+
+  progressEl.style.width = '100%';
+  drawZones();
+  overlay.classList.add('hidden');
+}
+
+// Google Maps callback
+window.initApp = initApp;
+</script>
+
+<!--
+  IMPORTANT: Restrict this API key in Google Cloud Console before going live!
+  Required APIs: Maps JavaScript, Geocoding, Directions, Distance Matrix, Places
+  https://console.cloud.google.com/apis/credentials
+-->
+<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjtswCtg_bKp3Upu8hh7GN31qRwn3Xf48&libraries=places,marker&callback=initApp"></script>
+
+</body>
+</html>
