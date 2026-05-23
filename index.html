@@ -337,7 +337,7 @@ function isNorthOfHwy39(lat, lng) {
 // ================================================================
 function getCachedIsochrone() {
   try {
-    const raw = localStorage.getItem('hoeslys_iso_v3');
+    const raw = localStorage.getItem('hoeslys_iso_v4');
     if (!raw) return null;
     const cached = JSON.parse(raw);
     if (Date.now() - cached.timestamp > CONFIG.cacheDurationMs) return null;
@@ -349,7 +349,7 @@ function getCachedIsochrone() {
 
 function setCachedIsochrone(boundaries) {
   try {
-    localStorage.setItem('hoeslys_iso_v3', JSON.stringify({
+    localStorage.setItem('hoeslys_iso_v4', JSON.stringify({
       boundaries, timestamp: Date.now(), maxMin: CONFIG.maxDriveMin, numAngles: CONFIG.numAngles
     }));
   } catch {}
@@ -410,7 +410,13 @@ async function computeIsochrone(onProgress) {
     }
   }
 
-  // Interpolate boundary for each time threshold using the same sample data
+  // Anchor every angle at (0 miles, 0 min) — the store itself.
+  // This replaces the hardcoded 5000m fallback with accurate interpolation
+  // for short thresholds like 15 min, at zero extra API cost.
+  angles.forEach(angle => {
+    samplesByAngle[angle].push({ miles: 0, driveMin: 0, pt: { lat: CONFIG.store.lat, lng: CONFIG.store.lng } });
+  });
+
   const thresholds = [15, 30, 45, 60];
   const boundaries = {};
   thresholds.forEach(maxMin => {
@@ -419,21 +425,14 @@ async function computeIsochrone(onProgress) {
       const samples = samplesByAngle[angle].sort((a, b) => a.miles - b.miles);
       let boundaryPt = samples[samples.length - 1].pt;
 
-      if (samples[0].driveMin > maxMin) {
-        boundaryPt = destPoint(CONFIG.store.lat, CONFIG.store.lng, angle, 5000);
-      } else {
-        for (let i = 0; i < samples.length - 1; i++) {
-          if (samples[i].driveMin <= maxMin && samples[i + 1].driveMin > maxMin) {
-            const t = (maxMin - samples[i].driveMin) / (samples[i + 1].driveMin - samples[i].driveMin);
-            boundaryPt = {
-              lat: samples[i].pt.lat + t * (samples[i + 1].pt.lat - samples[i].pt.lat),
-              lng: samples[i].pt.lng + t * (samples[i + 1].pt.lng - samples[i].pt.lng)
-            };
-            break;
-          }
-        }
-        if (samples[samples.length - 1].driveMin <= maxMin) {
-          boundaryPt = samples[samples.length - 1].pt;
+      for (let i = 0; i < samples.length - 1; i++) {
+        if (samples[i].driveMin <= maxMin && samples[i + 1].driveMin > maxMin) {
+          const t = (maxMin - samples[i].driveMin) / (samples[i + 1].driveMin - samples[i].driveMin);
+          boundaryPt = {
+            lat: samples[i].pt.lat + t * (samples[i + 1].pt.lat - samples[i].pt.lat),
+            lng: samples[i].pt.lng + t * (samples[i + 1].pt.lng - samples[i].pt.lng)
+          };
+          break;
         }
       }
       boundaries[maxMin].push(boundaryPt);
