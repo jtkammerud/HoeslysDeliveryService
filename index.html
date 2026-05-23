@@ -452,10 +452,10 @@ function drawZones() {
   // Draw largest ring first so smaller ones render on top.
   // Colors go dark (far/expensive) → light (close/cheap).
   const rings = [
-    { minutes: 60, color: '#1A3F6F', fillOpacity: 0.50, strokeOpacity: 0.6 },
-    { minutes: 45, color: '#2471A3', fillOpacity: 0.55, strokeOpacity: 0.6 },
-    { minutes: 30, color: '#7FB3D3', fillOpacity: 0.60, strokeOpacity: 0.7 },
-    { minutes: 15, color: '#D6EAF8', fillOpacity: 0.65, strokeOpacity: 0.7 },
+    { minutes: 60, color: '#1A3F6F', fillOpacity: 0.60, strokeOpacity: 0.70 },
+    { minutes: 45, color: '#2471A3', fillOpacity: 0.60, strokeOpacity: 0.70 },
+    { minutes: 30, color: '#7FB3D3', fillOpacity: 0.60, strokeOpacity: 0.70 },
+    { minutes: 15, color: '#D6EAF8', fillOpacity: 0.60, strokeOpacity: 0.70 },
   ];
 
   function sortByAngle(pts) {
