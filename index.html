@@ -147,10 +147,10 @@
     <div class="map-title-bar">
       <h2>Our delivery area</h2>
       <div class="map-legend">
-        <span><span class="dot" style="background:#7B2D1E"></span> 0–15 min</span>
-        <span><span class="dot" style="background:#B44B3A"></span> 15–30 min</span>
-        <span><span class="dot" style="background:#C97B5E"></span> 30–45 min</span>
-        <span><span class="dot" style="background:#D4A898"></span> 45–60 min</span>
+        <span><span class="dot" style="background:#C8E6D4;border:1px solid #78BEA2"></span> 0–15 min</span>
+        <span><span class="dot" style="background:#78BEA2"></span> 15–30 min</span>
+        <span><span class="dot" style="background:#3D8B6F"></span> 30–45 min</span>
+        <span><span class="dot" style="background:#1B5E44"></span> 45–60 min</span>
         <span><span class="dot" style="background:var(--brand-dark)"></span> Store</span>
       </div>
     </div>
@@ -449,12 +449,13 @@ async function computeIsochrone(onProgress) {
 function drawZones() {
   if (!isoReady) return;
 
-  // Draw largest ring first so smaller ones render on top
+  // Draw largest ring first so smaller ones render on top.
+  // Colors go dark (far/expensive) → light (close/cheap).
   const rings = [
-    { minutes: 60, color: '#D4A898', fillOpacity: 0.18, strokeOpacity: 0.4 },
-    { minutes: 45, color: '#C97B5E', fillOpacity: 0.22, strokeOpacity: 0.5 },
-    { minutes: 30, color: '#B44B3A', fillOpacity: 0.26, strokeOpacity: 0.6 },
-    { minutes: 15, color: '#7B2D1E', fillOpacity: 0.32, strokeOpacity: 0.7 },
+    { minutes: 60, color: '#1B5E44', fillOpacity: 0.50, strokeOpacity: 0.6 },
+    { minutes: 45, color: '#3D8B6F', fillOpacity: 0.55, strokeOpacity: 0.6 },
+    { minutes: 30, color: '#78BEA2', fillOpacity: 0.60, strokeOpacity: 0.7 },
+    { minutes: 15, color: '#C8E6D4', fillOpacity: 0.65, strokeOpacity: 0.7 },
   ];
 
   function sortByAngle(pts) {
